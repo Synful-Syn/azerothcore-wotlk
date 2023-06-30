@@ -1427,7 +1427,7 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                 if (!m_caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING) || (pos.GetPositionZ() - ground < distance))
                 {
                     float tstX = 0.0f, tstY = 0.0f, tstZ = 0.0f, prevX = 0.0f, prevY = 0.0f, prevZ = 0.0f;
-                    float tstZ1 = 0.0f, tstZ2 = 0.0f, tstZ3 = 0.0f, destz1 = 0.0f, destz2 = 0.0f, destz3 = 0.0f, srange = 0.0f, srange1 = 0.0f, srange2 = 0.0f, srange3 = 0.0f;
+                    float tstZ1 = 0.0f, tstZ2 = 0.0f, tstZ3 = 0.0f, destz1 = 0.0f, destz2 = 0.0f, destz3 = 0.0f, srange = 0.0f;
                     float maxtravelDistZ = 2.65f;
                     float overdistance = 0.0f;
                     float totalpath = 0.0f;
@@ -1504,11 +1504,11 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                             tstZ3 = map->GetHeight(phasemask, tstX, tstY, prevZ - maxtravelDistZ / 2, true, 25.0f);
 
                             //distance of rays, will select the shortest in 3D
-                            srange1 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ1 - prevZ) * (tstZ1 - prevZ));
+                            float srange1 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ1 - prevZ) * (tstZ1 - prevZ));
                             //LOG_ERROR("spells", "step = {}, distance of ray1 = {}", j, srange1);
-                            srange2 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ2 - prevZ) * (tstZ2 - prevZ));
+                            float srange2 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ2 - prevZ) * (tstZ2 - prevZ));
                             //LOG_ERROR("spells", "step = {}, distance of ray2 = {}", j, srange2);
-                            srange3 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ3 - prevZ) * (tstZ3 - prevZ));
+                            float srange3 = sqrt((tstY - prevY) * (tstY - prevY) + (tstX - prevX) * (tstX - prevX) + (tstZ3 - prevZ) * (tstZ3 - prevZ));
                             //LOG_ERROR("spells", "step = {}, distance of ray3 = {}", j, srange3);
 
                             if (srange1 < srange2)
@@ -1542,26 +1542,24 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                             //LOG_ERROR("spells", "total path > than distance in 3D , need to move back a bit for save distance, total path = {}, overdistance = {}", totalpath, overdistance);
                         }
 
-                        bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, prevX, prevY, prevZ + 0.5f, tstX, tstY, tstZ + 0.5f, tstX, tstY, tstZ, -0.5f);
+                        bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, prevX, prevY, prevZ, tstX, tstY, tstZ, tstX, tstY, tstZ, -0.5f);
                         // check dynamic collision
-                        bool dcol = m_caster->GetMap()->GetObjectHitPos(phasemask, prevX, prevY, prevZ + 0.5f, tstX, tstY, tstZ + 0.5f, tstX, tstY, tstZ, -0.5f);
+                        bool dcol = m_caster->GetMap()->GetObjectHitPos(phasemask, prevX, prevY, prevZ, tstX, tstY, tstZ, tstX, tstY, tstZ, -0.5f);
 
                         // collision occured
                         if (col || dcol || (overdistance > 0.0f && !map->IsInWater(phasemask, tstX, tstY, ground, collisionHeight)) || (fabs(prevZ - tstZ) > maxtravelDistZ && (tstZ > prevZ)))
                         {
-                            if ((overdistance > 0.0f) && (overdistance < 1.f))
-                            {
-                                destx = prevX + overdistance * cos(pos.GetOrientation());
-                                desty = prevY + overdistance * sin(pos.GetOrientation());
-                                //LOG_ERROR("spells", "(collision) collision occured 1");
-                            }
-                            else
+                            float xyAdjustment = std::max(0.0f, overdistance);
+
+                            if (col || dcol)
                             {
                                 // move back a bit
-                                destx = tstX - (0.6 * cos(pos.GetOrientation()));
-                                desty = tstY - (0.6 * sin(pos.GetOrientation()));
-                                //LOG_ERROR("spells", "(collision) collision occured 2");
+                                // Synful-Syn: Is this 0.6f just the player's body collision size?
+                                xyAdjustment = std::max(0.6f, xyAdjustment);
                             }
+
+                            destx = tstX - (xyAdjustment * cos(pos.GetOrientation()));
+                            desty = tstY - (xyAdjustment * sin(pos.GetOrientation()));
 
                             // highest available point
                             destz1 = map->GetHeight(phasemask, destx, desty, prevZ + maxtravelDistZ, true, 25.0f);
@@ -1570,10 +1568,10 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                             //lower than floor
                             destz3 = map->GetHeight(phasemask, destx, desty, prevZ - maxtravelDistZ / 2, true, 25.0f);
 
-                            //distance of rays, will select the shortest in 3D
-                            srange1 = sqrt((desty - prevY) * (desty - prevY) + (destx - prevX) * (destx - prevX) + (destz1 - prevZ) * (destz1 - prevZ));
-                            srange2 = sqrt((desty - prevY) * (desty - prevY) + (destx - prevX) * (destx - prevX) + (destz2 - prevZ) * (destz2 - prevZ));
-                            srange3 = sqrt((desty - prevY) * (desty - prevY) + (destx - prevX) * (destx - prevX) + (destz3 - prevZ) * (destz3 - prevZ));
+                            // will select the shortest difference comparatively to the previous Z axis
+                            float srange1 = abs(destz1 - prevZ);
+                            float srange2 = abs(destz2 - prevZ);
+                            float srange3 = abs(destz3 - prevZ);
 
                             if (srange1 < srange2)
                                 destz = destz1;
@@ -1597,9 +1595,9 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                 else
                 {
                     float z = pos.GetPositionZ();
-                    bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, pos.GetPositionX(), pos.GetPositionY(), z + 0.5f, destx, desty, z + 0.5f, destx, desty, z, -0.5f);
+                    bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, pos.GetPositionX(), pos.GetPositionY(), z, destx, desty, z, destx, desty, z, -0.5f);
                     // check dynamic collision
-                    bool dcol = m_caster->GetMap()->GetObjectHitPos(phasemask, pos.GetPositionX(), pos.GetPositionY(), z + 0.5f, destx, desty, z + 0.5f, destx, desty, z, -0.5f);
+                    bool dcol = m_caster->GetMap()->GetObjectHitPos(phasemask, pos.GetPositionX(), pos.GetPositionY(), z, destx, desty, z, destx, desty, z, -0.5f);
 
                     // collision occured
                     if (col || dcol)
