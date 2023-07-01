@@ -1542,7 +1542,9 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
                             //LOG_ERROR("spells", "total path > than distance in 3D , need to move back a bit for save distance, total path = {}, overdistance = {}", totalpath, overdistance);
                         }
 
-                        bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, prevX, prevY, prevZ, tstX, tstY, tstZ, tstX, tstY, tstZ, -0.5f);
+                        float oldTstZ = tstZ;
+                        bool col = VMAP::VMapFactory::createOrGetVMapMgr()->GetObjectHitPos(mapid, prevX, prevY, prevZ + 0.5f, tstX, tstY, tstZ + 0.5f, tstX, tstY, tstZ, -0.5f);
+                        tstZ = oldTstZ;
                         // check dynamic collision
                         bool dcol = m_caster->GetMap()->GetObjectHitPos(phasemask, prevX, prevY, prevZ, tstX, tstY, tstZ, tstX, tstY, tstZ, -0.5f);
 
